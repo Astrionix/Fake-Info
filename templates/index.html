@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake News Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-search-dollar"></i> TruthSeeker AI</h1>
+            <p>Advanced Misinformation Detection System</p>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <textarea id="newsText" placeholder="Paste the news article content here to analyze..."></textarea>
+                <div class="controls">
+                    <button id="analyzeBtn" onclick="analyzeNews()">
+                        <span id="btnText">Analyze Content</span>
+                        <div id="loader" class="loader" style="display: none;"></div>
+                    </button>
+                    <button id="clearBtn" onclick="clearText()" class="secondary">Clear</button>
+                </div>
+            </div>
+
+            <div id="resultSection" class="result-section" style="display: none;">
+                <div class="result-card" id="resultCard">
+                    <div class="icon-box">
+                        <i id="resultIcon" class="fas"></i>
+                    </div>
+                    <h2 id="resultTitle">Analyzing...</h2>
+                    <div class="confidence-meter">
+                        <label>Confidence Score</label>
+                        <div class="progress-bar">
+                            <div id="confidenceBar" class="progress-fill"></div>
+                        </div>
+                        <span id="confidenceValue">0%</span>
+                    </div>
+                    <p id="resultDescription" class="result-desc"></p>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Powered by Logistic Regression & TF-IDF Vectorization</p>
+        </footer>
+    </div>
+
+    <script>
+        async function analyzeNews() {
+            const text = document.getElementById('newsText').value;
+            if (!text.trim()) {
+                alert("Please enter some text to analyze.");
+                return;
+            }
+
+            const btn = document.getElementById('analyzeBtn');
+            const btnText = document.getElementById('btnText');
+            const loader = document.getElementById('loader');
+            const resultSection = document.getElementById('resultSection');
+
+            // Loading State
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            loader.style.display = 'block';
+            resultSection.style.display = 'none';
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayResult(data);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while connecting to the server.');
+            } finally {
+                btn.disabled = false;
+                btnText.style.display = 'block';
+                loader.style.display = 'none';
+            }
+        }
+
+        function displayResult(data) {
+            const resultSection = document.getElementById('resultSection');
+            const resultCard = document.getElementById('resultCard');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultIcon = document.getElementById('resultIcon');
+            const resultDesc = document.getElementById('resultDescription');
+            const confidenceBar = document.getElementById('confidenceBar');
+            const confidenceValue = document.getElementById('confidenceValue');
+
+            resultSection.style.display = 'flex';
+            
+            // Reset classes
+            resultCard.classList.remove('fake', 'real');
+
+            if (data.prediction === 'Misinformation') {
+                resultCard.classList.add('fake');
+                resultTitle.innerText = "Potential Misinformation";
+                resultIcon.className = "fas fa-exclamation-triangle";
+                resultDesc.innerText = "This content shows patterns consistent with unreliable or fake news sources.";
+            } else {
+                resultCard.classList.add('real');
+                resultTitle.innerText = "Legitimate Information";
+                resultIcon.className = "fas fa-check-circle";
+                resultDesc.innerText = "This content appears to be from a reliable source based on our analysis.";
+            }
+
+            confidenceValue.innerText = data.confidence + "%";
+            confidenceBar.style.width = data.confidence + "%";
+        }
+
+        function clearText() {
+            document.getElementById('newsText').value = '';
+            document.getElementById('resultSection').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
